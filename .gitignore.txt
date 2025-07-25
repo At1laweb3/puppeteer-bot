@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+
+# Puppeteer lokalni Chromium
+.local-chromium/
+
+# Dump fajlovi koje ne treba u repo
+/public/error_dump.html.txt
+/public/loaded_page.png.txt
+
+# BFG‑artefakti i tmp folderi
+bfg-*.jar
+puppeteer-bot-clean/
+puppeteer-bot-clean.bfg-report/
+
+# Logs & OS files
+*.log
+.DS_Store
+Thumbs.db
+
+# Env fajlovi
+.env
