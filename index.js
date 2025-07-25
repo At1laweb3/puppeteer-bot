@@ -44,9 +44,8 @@ app.post('/register', async (req, res) => {
     await page.waitForTimeout(5000);
 
     console.log('⌛ Čekam da se učita forma...');
-    if (!await page.waitForSelector('input[name="first_name"]', { timeout: 40000 }).catch(() => null)) {
-      throw new Error("Form field 'first_name' nije pronađen.");
-    }
+    const formReady = await page.waitForSelector('input[name="first_name"]', { timeout: 40000 }).catch(() => null);
+    if (!formReady) throw new Error("Form field 'first_name' nije pronađen.");
 
     console.log('✍️ Popunjavam formu...');
     await page.type('input[name="first_name"]', first_name);
@@ -79,7 +78,7 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    // Otkrij i enable-uj dugme
+    // Enable dugme
     await page.evaluate(() => {
       const btn = document.querySelector('button.register_live_btn');
       if (btn) {
@@ -88,25 +87,33 @@ app.post('/register', async (req, res) => {
       }
     });
 
-    console.log('📤 Šaljem formu...');
+    console.log('📤 Šaljem formu…');
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.evaluate(() => document.querySelector('button.register_live_btn').click());
 
-    // Umesto fiksnog waita, bolje bi bilo čekati neki indikator uspeha
-    await page.waitForTimeout(10000);
+    // ==== DEBUG post‑submit dump ====
+    await page.waitForTimeout(5000);
+    const postURL = page.url();
+    console.log('▶️ URL nakon submita:', postURL);
+    const postHTML = await page.content();
+    const postPath = path.join(__dirname, 'public', 'post_submit.html');
+    fs.writeFileSync(postPath, postHTML);
+    // ==== kraj debug ====
 
+    await page.waitForTimeout(8000);
     console.log('✅ Registracija završena.');
     await browser.close();
 
     return res.status(200).json({
       message: '✅ Registrovan uspešno',
       email,
-      password
+      password,
+      urlAfterSubmit: postURL,
+      debugHtml: '/debug/post_submit.html'
     });
   }
   catch (err) {
     console.error('❌ Greška tokom registracije:', err);
-    // dump za debug
     try {
       const [debugPage] = await browser.pages();
       const html = await debugPage.content();
@@ -114,8 +121,7 @@ app.post('/register', async (req, res) => {
       const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
-    }
-    catch (_) { /* ignore */ }
+    } catch (_) { /* ignore */ }
 
     if (browser) await browser.close();
     return res.status(500).json({
