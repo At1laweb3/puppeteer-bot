@@ -63,9 +63,10 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="confirm_password"]', password);
 
     // Birthdate selects
-    await page.select('select[name="birthDateYear"]', dob_year);
-    await page.select('select[name="birthDateMonth"]', dob_month);
-    await page.select('select[name="birthDateDay"]', dob_day);
+    // Updated to use id selectors from the form
+    await page.select('#dob_yy', dob_year);
+    await page.select('#dob_mm', dob_month);
+    await page.select('#dob_dd', dob_day);
 
     // Ostala podešavanja
     await page.select('select[name="accountType"]', 'live_fixed');
