@@ -1,3 +1,7 @@
+
+3. **Ceo novi `index.js`** (paste-o u root projekta, zamenjujući postojeći):
+
+```js
 const express = require('express');
 const app = express();
 const puppeteer = require('puppeteer');
@@ -21,8 +25,10 @@ app.post('/register', async (req, res) => {
       executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/114.0 Safari/537.36');
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
+    );
 
     console.log('🌐 Otvaranje stranice...');
     await page.goto('https://www.t4trade.com/en/register', { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -67,28 +73,45 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    // **BAŠ JEDNOSTAVNO**: čekamo 10s, pa dump
-    await page.waitForTimeout(10000);
+    // --- **OVDE** snimamo debug snapshot tačno posle klika: ---
+    console.log('🔍 Snimam finalni debug snapshot...');
+    const debugPage = (await browser.pages())[0];
+    // screenshot
+    await debugPage.screenshot({
+      path: path.join(__dirname, 'public', 'loaded_page.png'),
+      fullPage: true
+    });
+    // html dump
+    const html = await debugPage.content();
+    fs.writeFileSync(path.join(__dirname, 'public', 'error_dump.html'), html);
 
-    console.log('🔍 Snimam debug sliku...');
-    const dumpPage = (await browser.pages())[0];
-    await dumpPage.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
     console.log('🛠️ Debug dump spremljen.');
-
     await browser.close();
+
     return res.status(200).json({
-      message: '✅ Proces završen (ali proveri debug sliku!)',
+      message: '✅ Registrovan — pogledaj /debug/loaded_page.png za snapshot',
       email,
       password
     });
   } catch (err) {
     console.error('❌ Greška:', err);
-    try {
-      const dumpPage = (await browser.pages())[0];
-      await dumpPage.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
-    } catch (_) {/**/}
-    if (browser) await browser.close();
-    return res.status(500).json({ error: err.message, debug: { screenshot: '/debug/loaded_page.png' } });
+    if (browser) {
+      try {
+        const debugPage = (await browser.pages())[0];
+        await debugPage.screenshot({
+          path: path.join(__dirname, 'public', 'loaded_page.png'),
+          fullPage: true
+        });
+      } catch (_) {}
+      await browser.close();
+    }
+    return res.status(500).json({
+      error: err.message,
+      debug: {
+        screenshot: '/debug/loaded_page.png',
+        html: '/debug/error_dump.html'
+      }
+    });
   }
 });
 
