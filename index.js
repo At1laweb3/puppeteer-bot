@@ -23,14 +23,14 @@ app.post('/register', async (req, res) => {
   // Generišemo lozinku iz imena
   const password = `${first_name}123#`;
 
-  let browser;
+  let browser, page;
   try {
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
-    const page = await browser.newPage();
+    page = await browser.newPage();
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
@@ -87,8 +87,13 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
+    // **DEBUG DUMP**: odmah nakon što smo kliknuli
+    const dumpHtml = await page.content();
+    fs.writeFileSync(path.join(__dirname, 'public', 'after_click.html'), dumpHtml);
+    await page.screenshot({ path: path.join(__dirname, 'public', 'after_click.png'), fullPage: true });
+    console.log('🔍 Debug dump posle klika je snimljen.');
+
     console.log('⌛ Čekam da se pojavi “Congratulations” strana...');
-    // sada lovimo bilo koji element koji u sebi sadrži "Congratulations"
     await page.waitForXPath(
       "//*[contains(normalize-space(.), 'Congratulations')]",
       { timeout: 40000 }
@@ -106,20 +111,23 @@ app.post('/register', async (req, res) => {
   catch (err) {
     console.error('❌ Greška tokom registracije:', err);
     try {
-      const [debugPage] = await browser.pages();
-      const html = await debugPage.content();
-      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
-      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
-      fs.writeFileSync(htmlPath, html);
-      await debugPage.screenshot({ path: screenshotPath, fullPage: true });
+      // fiksirano: koristimo baš ovu `page` instancu
+      const html = page ? await page.content() : '';
+      fs.writeFileSync(path.join(__dirname, 'public', 'loaded_page.html'), html);
+      if (page) {
+        await page.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
+      }
+      console.log('🛠️ Dump za debug je snimljen.');
     } catch (_) { /* ignore */ }
 
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
       debug: {
-        screenshot: '/debug/loaded_page.png',
-        html: '/debug/error_dump.html'
+        afterClickHtml: '/debug/after_click.html',
+        afterClickPng: '/debug/after_click.png',
+        loadedHtml: '/debug/loaded_page.html',
+        loadedPng: '/debug/loaded_page.png'
       }
     });
   }
