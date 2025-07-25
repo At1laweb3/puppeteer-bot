@@ -87,8 +87,14 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    // više ne čekamo navigaciju, već samo fiksni timeout
+    // čekamo da forma “pokrene” svoj JS
     await page.waitForTimeout(12000);
+
+    // **OVO JE NOVO**: proverimo da li smo i dalje na /register
+    const currentUrl = page.url();
+    if (currentUrl.includes('/en/register')) {
+      throw new Error('Form submission nije preusmerila sa /register — registracija nije uspela.');
+    }
 
     console.log('✅ Registracija završena.');
     await browser.close();
@@ -110,6 +116,7 @@ app.post('/register', async (req, res) => {
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
     } catch (_) { /* ignore */ }
+
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
