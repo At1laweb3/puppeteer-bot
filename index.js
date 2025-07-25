@@ -87,22 +87,23 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    // *** novo: čekamo da se URL promeni na client portal ***
-    console.log('⌛ Čekam preusmerenje na client-portal...');
-    await page.waitForFunction(
-      () => window.location.pathname.includes('/client-portal'),
-      { timeout: 60000 }
+    console.log('⌛ Čekam “Congratulations” stranicu...');
+    // čekamo da se na ekranu pojavi green check & tekst "Congratulations"
+    await page.waitForXPath(
+      '//h1[contains(normalize-space(.), "Congratulations")]',
+      { timeout: 30000 }
     );
-    console.log('✅ Uspešno preusmereno na client-portal');
 
+    console.log('✅ Registrovan uspešno.');
     await browser.close();
+
     return res.status(200).json({
-      message: '✅ Registrovan uspešno',
+      message: '✅ Registrovan uspešno — proveri email za dalje instrukcije',
       email,
       password
     });
-
-  } catch (err) {
+  }
+  catch (err) {
     console.error('❌ Greška tokom registracije:', err);
     // dump za debug
     try {
