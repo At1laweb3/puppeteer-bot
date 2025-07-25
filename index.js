@@ -59,7 +59,8 @@ app.post('/register', async (req, res) => {
     // Polje za telefon se zove 'phone_mobile'
     await page.type('input[name="phone_mobile"]', phone);
     await page.type('input[name="password"]', password);
-    await page.type('input[name="confirmPassword"]', password);
+    // Polje za potvrdu šifre se zove 'confirm_password'
+    await page.type('input[name="confirm_password"]', password);
 
     // Birthdate selects
     await page.select('select[name="birthDateYear"]', dob_year);
