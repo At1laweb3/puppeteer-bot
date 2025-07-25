@@ -81,16 +81,29 @@ app.post('/register', async (req, res) => {
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
 
-    // Check all checkboxes
-    const checkboxes = await page.$$('input[type="checkbox"]');
-    for (const cb of checkboxes) {
-      const checked = await (await cb.getProperty('checked')).jsonValue();
-      if (!checked) await cb.click();
-    }
+    // Ensure all checkboxes are checked (terms acceptance)
+    console.log('✔️ Checking all terms checkboxes');
+    await page.evaluate(() => {
+      document.querySelectorAll('input[type="checkbox"]')
+        .forEach(cb => {
+          if (!cb.checked) {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+    });
+
+    // Scroll to bottom to reveal submit button and enable it
+    await page.evaluate(() => {
+      const btn = document.querySelector('button.register_live_btn');
+      if (btn) btn.disabled = false;
+      window.scrollTo(0, document.body.scrollHeight);
+    });
 
     console.log('Šaljem formu...');
-    // Scroll to submit button and ensure checkboxes are checked
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForSelector('button.register_live_btn', { visible: true });
+    // Click the styled submit button
+    await page.click('button.register_live_btn');(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForSelector('button.register_live_btn', { visible: true });
     // Click the styled submit button
     await page.click('button.register_live_btn');
