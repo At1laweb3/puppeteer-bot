@@ -105,8 +105,9 @@ app.post('/register', async (req, res) => {
     // Click the styled submit button
     // Use JS click to bypass element visibility issues
     await page.evaluate(() => document.querySelector('button.register_live_btn').click());
-    // Wait for navigation or success response
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 });(() => window.scrollTo(0, document.body.scrollHeight));
+    // Umesto čekanja navigaciju, čekamo statički delay da se API proces obavi
+    await page.waitForTimeout(10000);
+    // Nastavljamo dalje i vraćamo success response(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForSelector('button.register_live_btn', { visible: true });
     // Click the styled submit button
     await page.click('button.register_live_btn');
