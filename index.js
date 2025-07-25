@@ -89,7 +89,11 @@ app.post('/register', async (req, res) => {
     }
 
     console.log('Šaljem formu...');
-    await page.click('button[type="submit"]');
+    // Scroll to submit button and ensure checkboxes are checked
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForSelector('button.register_live_btn', { visible: true });
+    // Click the styled submit button
+    await page.click('button.register_live_btn');
     await page.waitForTimeout(8000);
 
     console.log('Registracija završena.');
