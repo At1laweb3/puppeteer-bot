@@ -10,39 +10,24 @@ app.use(express.json());
 app.use('/debug', express.static(path.join(__dirname, 'public')));
 
 app.post('/register', async (req, res) => {
-  const {
-    first_name,
-    last_name,
-    email,
-    phone,
-    dob_year,
-    dob_month,
-    dob_day
-  } = req.body;
-
-  // Generišemo lozinku iz imena
+  const { first_name, last_name, email, phone, dob_year, dob_month, dob_day } = req.body;
   const password = `${first_name}123#`;
 
   let browser;
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox','--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
-    );
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/114.0 Safari/537.36');
 
     console.log('🌐 Otvaranje stranice...');
-    await page.goto('https://www.t4trade.com/en/register', {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
-    });
+    await page.goto('https://www.t4trade.com/en/register', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    console.log('⌛ Čekam da se učita forma...');
+    console.log('⌛ Čekam formu...');
     await page.waitForSelector('input[name="first_name"]', { timeout: 40000 });
 
     console.log('✍️ Popunjavam osnovne podatke...');
@@ -53,11 +38,7 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="password"]', password);
     await page.type('input[name="confirm_password"]', password);
 
-    console.log('🎂 Biram datum rođenja...');
-    // čekamo da selekt id-ovi budu prisutni
-    await page.waitForSelector('#dob_yy', { timeout: 20000 });
-    await page.waitForSelector('#dob_mm', { timeout: 20000 });
-    await page.waitForSelector('#dob_dd', { timeout: 20000 });
+    console.log('🎂 Biram datum...');
     await page.select('#dob_yy', dob_year);
     await page.select('#dob_mm', dob_month);
     await page.select('#dob_dd', dob_day);
@@ -66,16 +47,13 @@ app.post('/register', async (req, res) => {
     await page.select('select[name="country"]', 'RS');
     await page.waitForTimeout(1000);
 
-    console.log('⌛ Čekam da “Account Type” postane aktivan...');
-    await page.waitForSelector('#account_type:not([disabled])', { timeout: 30000 });
-
     console.log('🔧 Popunjavam trading-account polja...');
     await page.select('#account_type', 'live_fixed');
     await page.select('select[name="bonus_scheme"]', '031617');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
 
-    console.log('✔️ Potvrđujem sve checkbox-ove...');
+    console.log('✔️ Checkbox...');
     await page.evaluate(() => {
       document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         if (!cb.checked) {
@@ -85,42 +63,32 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    console.log('📤 Klik na “Open your Trading Account” dugme...');
+    console.log('📤 Klik submit...');
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    console.log('⌛ Čekam “Congratulations” stranu...');
-    await page.waitForXPath("//*[contains(normalize-space(.), 'Congratulations')]", { timeout: 40000 });
+    // **BAŠ JEDNOSTAVNO**: čekamo 10s, pa dump
+    await page.waitForTimeout(10000);
 
-    console.log('✅ Registrovan uspešno.');
+    console.log('🔍 Snimam debug sliku...');
+    const dumpPage = (await browser.pages())[0];
+    await dumpPage.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
+    console.log('🛠️ Debug dump spremljen.');
+
     await browser.close();
-
     return res.status(200).json({
-      message: '✅ Registrovan uspešno — čekajte email sa daljim instrukcijama',
+      message: '✅ Proces završen (ali proveri debug sliku!)',
       email,
       password
     });
-
   } catch (err) {
-    console.error('❌ Greška tokom registracije:', err);
+    console.error('❌ Greška:', err);
     try {
-      const [debugPage] = await browser.pages();
-      const html = await debugPage.content();
-      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
-      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
-      fs.writeFileSync(htmlPath, html);
-      await debugPage.screenshot({ path: screenshotPath, fullPage: true });
-      console.log('🛠️ Dump za debug je snimljen.');
-    } catch (_) { /* ignore */ }
-
+      const dumpPage = (await browser.pages())[0];
+      await dumpPage.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
+    } catch (_) {/**/}
     if (browser) await browser.close();
-    return res.status(500).json({
-      error: err.message,
-      debug: {
-        screenshot: '/debug/loaded_page.png',
-        html: '/debug/error_dump.html'
-      }
-    });
+    return res.status(500).json({ error: err.message, debug: { screenshot: '/debug/loaded_page.png' } });
   }
 });
 
