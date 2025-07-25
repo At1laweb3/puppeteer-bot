@@ -25,9 +25,10 @@ app.post('/register', async (req, res) => {
 
   let browser;
   try {
+    // Pokretanje Puppeteer‑a
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox','--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
@@ -41,11 +42,9 @@ app.post('/register', async (req, res) => {
       waitUntil: 'domcontentloaded',
       timeout: 60000
     });
-    await page.waitForTimeout(5000);
 
     console.log('⌛ Čekam da se učita forma...');
-    const formReady = await page.waitForSelector('input[name="first_name"]', { timeout: 40000 }).catch(() => null);
-    if (!formReady) throw new Error("Form field 'first_name' nije pronađen.");
+    await page.waitForSelector('input[name="first_name"]', { timeout: 40000 });
 
     console.log('✍️ Popunjavam formu...');
     await page.type('input[name="first_name"]', first_name);
@@ -60,15 +59,23 @@ app.post('/register', async (req, res) => {
     await page.select('#dob_mm', dob_month);
     await page.select('#dob_dd', dob_day);
 
-    console.log('🏳️ Biram zemlju i ostalo...');
+    console.log('🏳️ Biram zemlju...');
     await page.select('select[name="country"]', 'RS');
-    await page.waitForTimeout(500);
+
+    // Sačekamo da se ‘Account Type’ polje osveži i omogući
+    console.log('⌛ Čekam da “Account Type” postane aktivan...');
+    await page.waitForFunction(
+      () => !document.querySelector('#account_type').disabled,
+      { timeout: 30000 }
+    );
+
+    console.log('🏳️ Biram account type i ostalo...');
     await page.select('#account_type', 'live_fixed');
     await page.select('select[name="bonus_scheme"]', '031617');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
 
-    console.log('✔️ Potvrđujem uslove...');
+    console.log('✔️ Potvrđujem sve checkbox-ove...');
     await page.evaluate(() => {
       document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         if (!cb.checked) {
@@ -78,47 +85,36 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    // Enable dugme
-    await page.evaluate(() => {
-      const btn = document.querySelector('button.register_live_btn');
-      if (btn) {
-        btn.disabled = false;
-        btn.scrollIntoView({ block: 'center' });
-      }
-    });
+    console.log('📤 Šaljem formu i čekam navigaciju...');
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
+      page.click('button.register_live_btn')
+    ]);
 
-    console.log('📤 Šaljem formu…');
-    await page.waitForSelector('button.register_live_btn', { visible: true });
-    await page.evaluate(() => document.querySelector('button.register_live_btn').click());
+    // Proverimo da li je URL promenjen
+    if (page.url().includes('/register')) {
+      throw new Error('Form submission nije uspeo – ostali smo na stranici register.');
+    }
 
-    // ==== DEBUG post‑submit dump ====
-    await page.waitForTimeout(5000);
-    const postURL = page.url();
-    console.log('▶️ URL nakon submita:', postURL);
-    const postHTML = await page.content();
-    const postPath = path.join(__dirname, 'public', 'post_submit.html');
-    fs.writeFileSync(postPath, postHTML);
-    // ==== kraj debug ====
-
-    await page.waitForTimeout(8000);
     console.log('✅ Registracija završena.');
     await browser.close();
 
     return res.status(200).json({
       message: '✅ Registrovan uspešno',
       email,
-      password,
-      urlAfterSubmit: postURL,
-      debugHtml: '/debug/post_submit.html'
+      password
     });
-  }
-  catch (err) {
+
+  } catch (err) {
     console.error('❌ Greška tokom registracije:', err);
+
+    // Dump za debug
     try {
       const [debugPage] = await browser.pages();
       const html = await debugPage.content();
       const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
       const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
+
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
     } catch (_) { /* ignore */ }
