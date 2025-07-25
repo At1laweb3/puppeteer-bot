@@ -54,19 +54,23 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="confirm_password"]', password);
 
     console.log('🎂 Biram datum rođenja...');
-    await page.select('select[name="dob_year"]', dob_year);
-    await page.select('select[name="dob_month"]', dob_month);
-    await page.select('select[name="dob_day"]', dob_day);
+    // čekamo da selekt id-ovi budu prisutni
+    await page.waitForSelector('#dob_yy', { timeout: 20000 });
+    await page.waitForSelector('#dob_mm', { timeout: 20000 });
+    await page.waitForSelector('#dob_dd', { timeout: 20000 });
+    await page.select('#dob_yy', dob_year);
+    await page.select('#dob_mm', dob_month);
+    await page.select('#dob_dd', dob_day);
 
     console.log('🏳️ Biram zemlju...');
     await page.select('select[name="country"]', 'RS');
     await page.waitForTimeout(1000);
 
-    console.log('⌛ Čekam da dropdown-ovi postanu aktivni...');
-    await page.waitForSelector('select[name="account_type"]:not([disabled])', { timeout: 30000 });
+    console.log('⌛ Čekam da “Account Type” postane aktivan...');
+    await page.waitForSelector('#account_type:not([disabled])', { timeout: 30000 });
 
     console.log('🔧 Popunjavam trading-account polja...');
-    await page.select('select[name="account_type"]', 'live_fixed');
+    await page.select('#account_type', 'live_fixed');
     await page.select('select[name="bonus_scheme"]', '031617');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
@@ -85,19 +89,8 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    // ———— DEBUG DUMP NAKON KLIKA ————
-    await page.waitForTimeout(5000);
-    const afterClickPath = path.join(__dirname, 'public', 'after_click.png');
-    const afterHtmlPath = path.join(__dirname, 'public', 'after_click.html');
-    await page.screenshot({ path: afterClickPath, fullPage: true });
-    fs.writeFileSync(afterHtmlPath, await page.content());
-    console.log('🔍 Debug dump posle klika je snimljen.');
-
-    console.log('⌛ Čekam da se pojavi “Congratulations” strana...');
-    await page.waitForXPath(
-      "//*[contains(normalize-space(.), 'Congratulations')]",
-      { timeout: 40000 }
-    );
+    console.log('⌛ Čekam “Congratulations” stranu...');
+    await page.waitForXPath("//*[contains(normalize-space(.), 'Congratulations')]", { timeout: 40000 });
 
     console.log('✅ Registrovan uspešno.');
     await browser.close();
@@ -125,11 +118,7 @@ app.post('/register', async (req, res) => {
       error: err.message,
       debug: {
         screenshot: '/debug/loaded_page.png',
-        html: '/debug/error_dump.html',
-        afterClick: {
-          screenshot: '/debug/after_click.png',
-          html: '/debug/after_click.html'
-        }
+        html: '/debug/error_dump.html'
       }
     });
   }
