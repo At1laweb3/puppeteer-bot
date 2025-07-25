@@ -76,7 +76,8 @@ app.post('/register', async (req, res) => {
 
     // Sada možemo izabrati tip računa
     await page.select('select[id="account_type"]', 'live_fixed');
-    await page.select('select[name="bonusType"]', 'no_bonus');
+    // Select bonus scheme (Standard No Bonus = '031617')
+    await page.select('select[name="bonus_scheme"]', '031617');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
 
