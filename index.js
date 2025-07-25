@@ -69,7 +69,13 @@ app.post('/register', async (req, res) => {
     await page.select('#dob_dd', dob_day);
 
     // Ostala podešavanja
-    await page.select('select[name="accountType"]', 'live_fixed');
+    // Prvo izaberemo zemlju (npr. Srbija = RS) da bismo omogućili Trading Account
+    console.log('🏳️ Selecting country...');
+    await page.select('select[name="country"]', 'RS');
+    await page.waitForTimeout(1000);
+
+    // Sada možemo izabrati tip računa
+    await page.select('select[id="account_type"]', 'live_fixed');
     await page.select('select[name="bonusType"]', 'no_bonus');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
