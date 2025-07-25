@@ -103,7 +103,10 @@ app.post('/register', async (req, res) => {
     console.log('Šaljem formu...');
     await page.waitForSelector('button.register_live_btn', { visible: true });
     // Click the styled submit button
-    await page.click('button.register_live_btn');(() => window.scrollTo(0, document.body.scrollHeight));
+    // Use JS click to bypass element visibility issues
+    await page.evaluate(() => document.querySelector('button.register_live_btn').click());
+    // Wait for navigation or success response
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 });(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForSelector('button.register_live_btn', { visible: true });
     // Click the styled submit button
     await page.click('button.register_live_btn');
