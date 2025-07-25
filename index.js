@@ -87,18 +87,18 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    console.log('⌛ Čekam poruku o uspehu...');
-    // čekamo da se pojavi tekst potvrde na istoj URL
-    await page.waitForFunction(
-      () => document.body.innerText.includes('You have successfully registered'),
-      { timeout: 30000 }
+    console.log('⌛ Čekam da se pojavi “Congratulations” stranica...');
+    // čekamo h3 sa tekstom “Congratulations”
+    await page.waitForXPath(
+      "//h3[contains(normalize-space(.), 'Congratulations')]",
+      { timeout: 40000 }
     );
 
     console.log('✅ Registrovan uspešno.');
     await browser.close();
 
     return res.status(200).json({
-      message: '✅ Registrovan uspešno — proveri email za dalje instrukcije',
+      message: '✅ Registrovan uspešno — čekajte email sa daljim instrukcijama',
       email,
       password
     });
