@@ -10,16 +10,7 @@ app.use(express.json());
 app.use('/debug', express.static(path.join(__dirname, 'public')));
 
 app.post('/register', async (req, res) => {
-  const {
-    first_name,
-    last_name,
-    email,
-    phone,
-    dob_year,
-    dob_month,
-    dob_day
-  } = req.body;
-
+  const { first_name, last_name, email, phone, dob_year, dob_month, dob_day } = req.body;
   // Generišemo lozinku iz imena
   const password = `${first_name}123#`;
 
@@ -30,7 +21,6 @@ app.post('/register', async (req, res) => {
       args: ['--no-sandbox','--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
-
     const page = await browser.newPage();
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -84,17 +74,18 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    console.log('📤 Klik na “Open your Trading Account” dugme...');
-    await page.waitForSelector('button.register_live_btn', { visible: true });
-    await page.click('button.register_live_btn');
+    console.log('📤 Klik na “Open your Trading Account” dugme i čekam navigaciju...');
+    // istovremeno klik i čekanje navigacije na /en/client-portal
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
+      page.click('button.register_live_btn')
+    ]);
 
-    // čekamo da forma “pokrene” svoj JS
-    await page.waitForTimeout(12000);
+    const finalUrl = page.url();
+    console.log('🛬 Stigli smo na URL:', finalUrl);
 
-    // proverimo da li smo i dalje na /register
-    const currentUrl = page.url();
-    if (currentUrl.includes('/en/register')) {
-      throw new Error('Form submission nije preusmerila sa /register — registracija nije uspela.');
+    if (!finalUrl.includes('/en/client-portal')) {
+      throw new Error(`Neočekivan URL nakon submita: ${finalUrl}`);
     }
 
     console.log('✅ Registracija završena.');
@@ -105,24 +96,32 @@ app.post('/register', async (req, res) => {
       email,
       password
     });
-  }
-  catch (err) {
-    console.error('❌ Greška tokom registracije:', err);
 
-    // Umesto dump fajlova, logujemo ceo HTML za inspekciju
+  } catch (err) {
+    console.error('❌ Greška tokom registracije:', err);
+    // dump za debug
     try {
       const [debugPage] = await browser.pages();
+      // logujemo koji URL je bio
+      console.error('🔥 DEBUG URL:', debugPage.url());
       const html = await debugPage.content();
-      console.log('🔥 DEBUG HTML BEGIN 🔥');
-      console.log(html);
-      console.log('🔥 DEBUG HTML END 🔥');
+      console.error('🔥 DEBUG HTML BEGIN 🔥');
+      console.error(html);
+      console.error('🔥 DEBUG HTML END 🔥');
+
+      // i čuvamo fajlove u public/debug za vizuelnu inspekciju
+      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
+      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
+      fs.writeFileSync(htmlPath, html);
+      await debugPage.screenshot({ path: screenshotPath, fullPage: true });
     } catch (_) { /* ignore */ }
 
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
       debug: {
-        note: 'Pogledaj Deploy Logs za DEBUG HTML između markera'
+        screenshot: '/debug/loaded_page.png',
+        html: '/debug/error_dump.html'
       }
     });
   }
