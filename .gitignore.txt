@@ -4,9 +4,10 @@ node_modules/
 # Puppeteer lokalni Chromium
 .local-chromium/
 
-# Dump fajlovi koje ne treba u repo
-/public/error_dump.html.txt
-/public/loaded_page.png.txt
+# Ignore runtime debug dump fajlove, ali zadrži public folder
+/public/*.html
+/public/*.png
+!public/.gitkeep
 
 # BFG‑artefakti i tmp folderi
 bfg-*.jar

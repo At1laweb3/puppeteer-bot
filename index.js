@@ -1,4 +1,3 @@
-```js
 const express = require('express');
 const app = express();
 const puppeteer = require('puppeteer');
@@ -24,7 +23,7 @@ app.post('/register', async (req, res) => {
 
   let browser;
   try {
-    // Pokrećemo Puppeteer sa ugrađenim Chromiumom iz node_modules
+    // Start Puppeteer with bundled Chromium
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -32,7 +31,7 @@ app.post('/register', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    // Koristimo realan User-Agent da izbjegnemo bot otkrivanje
+    // Set User-Agent to avoid bot detection
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
@@ -45,13 +44,10 @@ app.post('/register', async (req, res) => {
       timeout: 60000
     });
 
-    // Kratko čekanje za dodatnu stabilnost
     await page.waitForTimeout(5000);
 
     console.log('Čekam da se učita forma...');
-    const formReady = await page
-      .waitForSelector('input[name="first_name"]', { timeout: 40000 })
-      .catch(() => null);
+    const formReady = await page.waitForSelector('input[name="first_name"]', { timeout: 40000 }).catch(() => null);
     if (!formReady) {
       throw new Error("Input 'first_name' nije pronađen ni nakon 40 sekundi.");
     }
@@ -60,23 +56,23 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="first_name"]', first_name);
     await page.type('input[name="last_name"]', last_name);
     await page.type('input[name="email"]', email);
-    // Polje za telefon na sajtu se zove 'mobile'
+    // Field for phone is 'mobile'
     await page.type('input[name="mobile"]', phone);
     await page.type('input[name="password"]', password);
     await page.type('input[name="confirmPassword"]', password);
 
-    // Datum rođenja
+    // Birthdate selects
     await page.select('select[name="birthDateYear"]', dob_year);
     await page.select('select[name="birthDateMonth"]', dob_month);
     await page.select('select[name="birthDateDay"]', dob_day);
 
-    // Ostala podešavanja
+    // Other selects
     await page.select('select[name="accountType"]', 'live_fixed');
     await page.select('select[name="bonusType"]', 'no_bonus');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
 
-    // Označavanje svih checkbox-ova
+    // Check all checkboxes
     const checkboxes = await page.$$('input[type="checkbox"]');
     for (const cb of checkboxes) {
       const checked = await (await cb.getProperty('checked')).jsonValue();
@@ -93,7 +89,7 @@ app.post('/register', async (req, res) => {
   } catch (err) {
     console.error('Greška tokom registracije:', err);
 
-    // Pokušaj snimanja debug dumpa
+    // Attempt debug dump
     try {
       const debugPage = (await browser.pages())[0];
       const html = await debugPage.content();
@@ -121,4 +117,3 @@ app.post('/register', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Server running on port ' + PORT));
-```
