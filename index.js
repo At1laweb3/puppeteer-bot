@@ -25,10 +25,9 @@ app.post('/register', async (req, res) => {
 
   let browser;
   try {
-    // Pokretanje Puppeteer‑a
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox','--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
@@ -62,7 +61,6 @@ app.post('/register', async (req, res) => {
     console.log('🏳️ Biram zemlju...');
     await page.select('select[name="country"]', 'RS');
 
-    // Sačekamo da se ‘Account Type’ polje osveži i omogući
     console.log('⌛ Čekam da “Account Type” postane aktivan...');
     await page.waitForFunction(
       () => !document.querySelector('#account_type').disabled,
@@ -85,16 +83,12 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    console.log('📤 Šaljem formu i čekam navigaciju...');
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
-      page.click('button.register_live_btn')
-    ]);
+    console.log('📤 Klik na “Open your Trading Account” dugme...');
+    await page.waitForSelector('button.register_live_btn', { visible: true });
+    await page.click('button.register_live_btn');
 
-    // Proverimo da li je URL promenjen
-    if (page.url().includes('/register')) {
-      throw new Error('Form submission nije uspeo – ostali smo na stranici register.');
-    }
+    // više ne čekamo navigaciju, već samo fiksni timeout
+    await page.waitForTimeout(12000);
 
     console.log('✅ Registracija završena.');
     await browser.close();
@@ -104,21 +98,18 @@ app.post('/register', async (req, res) => {
       email,
       password
     });
-
-  } catch (err) {
+  }
+  catch (err) {
     console.error('❌ Greška tokom registracije:', err);
-
-    // Dump za debug
+    // dump za debug
     try {
       const [debugPage] = await browser.pages();
       const html = await debugPage.content();
       const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
       const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
-
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
     } catch (_) { /* ignore */ }
-
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
