@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 app.use(express.json());
+// Serviramo debug fajlove iz public foldera
 app.use('/debug', express.static(path.join(__dirname, 'public')));
 
 app.post('/register', async (req, res) => {
@@ -22,15 +23,18 @@ app.post('/register', async (req, res) => {
   let browser = null;
 
   try {
+    // Pokrećemo Puppeteer sa njegovim Chromiumom iz node_modules
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: '/usr/bin/chromium-browser' // <- OVO JE KLJUČNI DODATAK
+      executablePath: puppeteer.executablePath()
     });
 
     const page = await browser.newPage();
+    // Postavimo user agent da izbjegnemo neke bot‑blokade
     await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0 Safari/537.36'
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
     );
 
     console.log("✅ NOVI KOD JE UČITAN");
@@ -40,10 +44,12 @@ app.post('/register', async (req, res) => {
       timeout: 60000
     });
 
-    await page.waitForTimeout(5000); // dodatno čekanje
+    await page.waitForTimeout(5000);
 
     console.log("⌛ Čekam da se učita forma...");
-    const formReady = await page.waitForSelector('input[name="first_name"]', { timeout: 40000 }).catch(() => null);
+    const formReady = await page
+      .waitForSelector('input[name="first_name"]', { timeout: 40000 })
+      .catch(() => null);
     if (!formReady) {
       throw new Error("Input 'first_name' nije pronađen ni nakon 40 sekundi.");
     }
@@ -81,11 +87,12 @@ app.post('/register', async (req, res) => {
   } catch (err) {
     console.error('❌ Greška tokom registracije:', err);
 
+    // Snimanje debug dumpova
     try {
       const page = (await browser.pages())[0];
       const html = await page.content();
-      const screenshotPath = path.join(__dirname, 'public/loaded_page.png');
-      const htmlPath = path.join(__dirname, 'public/error_dump.html');
+      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
+      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
 
       fs.writeFileSync(htmlPath, html);
       await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -93,15 +100,16 @@ app.post('/register', async (req, res) => {
       console.error("⚠️ Nije uspelo snimanje za debug:", innerErr);
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       error: err.message,
       debug: {
         screenshot: "/debug/loaded_page.png",
         html: "/debug/error_dump.html"
       }
     });
+
   } finally {
-    if (browser !== null) await browser.close();
+    if (browser) await browser.close();
   }
 });
 
