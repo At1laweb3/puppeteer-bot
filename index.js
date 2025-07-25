@@ -23,7 +23,7 @@ app.post('/register', async (req, res) => {
 
   let browser;
   try {
-    // Start Puppeteer with bundled Chromium
+    // Pokrećemo Puppeteer sa ugrađenim Chromiumom iz node_modules
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -31,7 +31,7 @@ app.post('/register', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    // Set User-Agent to avoid bot detection
+    // Setovanje User-Agent da izbjegnemo bot detekciju
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
@@ -56,8 +56,8 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="first_name"]', first_name);
     await page.type('input[name="last_name"]', last_name);
     await page.type('input[name="email"]', email);
-    // Field for phone is 'mobile'
-    await page.type('input[name="mobile"]', phone);
+    // Polje za telefon se zove 'phone_mobile'
+    await page.type('input[name="phone_mobile"]', phone);
     await page.type('input[name="password"]', password);
     await page.type('input[name="confirmPassword"]', password);
 
@@ -66,7 +66,7 @@ app.post('/register', async (req, res) => {
     await page.select('select[name="birthDateMonth"]', dob_month);
     await page.select('select[name="birthDateDay"]', dob_day);
 
-    // Other selects
+    // Ostala podešavanja
     await page.select('select[name="accountType"]', 'live_fixed');
     await page.select('select[name="bonusType"]', 'no_bonus');
     await page.select('select[name="currency"]', 'EUR');
