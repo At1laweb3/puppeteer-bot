@@ -27,7 +27,7 @@ app.post('/register', async (req, res) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox','--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
@@ -87,10 +87,10 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    console.log('⌛ Čekam da se pojavi “Congratulations” stranica...');
-    // čekamo h3 sa tekstom “Congratulations”
+    console.log('⌛ Čekam da se pojavi “Congratulations” strana...');
+    // sada lovimo bilo koji element koji u sebi sadrži "Congratulations"
     await page.waitForXPath(
-      "//h3[contains(normalize-space(.), 'Congratulations')]",
+      "//*[contains(normalize-space(.), 'Congratulations')]",
       { timeout: 40000 }
     );
 
