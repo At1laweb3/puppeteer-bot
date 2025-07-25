@@ -87,10 +87,10 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    console.log('⌛ Čekam “Congratulations” stranicu...');
-    // čekamo da se na ekranu pojavi green check & tekst "Congratulations"
-    await page.waitForXPath(
-      '//h1[contains(normalize-space(.), "Congratulations")]',
+    console.log('⌛ Čekam poruku o uspehu...');
+    // čekamo da se pojavi tekst potvrde na istoj URL
+    await page.waitForFunction(
+      () => document.body.innerText.includes('You have successfully registered'),
       { timeout: 30000 }
     );
 
@@ -105,7 +105,6 @@ app.post('/register', async (req, res) => {
   }
   catch (err) {
     console.error('❌ Greška tokom registracije:', err);
-    // dump za debug
     try {
       const [debugPage] = await browser.pages();
       const html = await debugPage.content();
