@@ -4,9 +4,9 @@ node_modules/
 # Puppeteer lokalni Chromium
 .local-chromium/
 
-# Ignore runtime debug dump fajlove, ali zadrži public folder
-/public/*.html
-/public/*.png
+# Do not ignore runtime debug dumps:
+# /public/*.html
+# /public/*.png
 !public/.gitkeep
 
 # BFG‑artefakti i tmp folderi
