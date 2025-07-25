@@ -23,14 +23,14 @@ app.post('/register', async (req, res) => {
   // Generišemo lozinku iz imena
   const password = `${first_name}123#`;
 
-  let browser, page;
+  let browser;
   try {
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
-    page = await browser.newPage();
+    const page = await browser.newPage();
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
@@ -45,7 +45,7 @@ app.post('/register', async (req, res) => {
     console.log('⌛ Čekam da se učita forma...');
     await page.waitForSelector('input[name="first_name"]', { timeout: 40000 });
 
-    console.log('✍️ Popunjavam formu...');
+    console.log('✍️ Popunjavam osnovne podatke...');
     await page.type('input[name="first_name"]', first_name);
     await page.type('input[name="last_name"]', last_name);
     await page.type('input[name="email"]', email);
@@ -54,21 +54,19 @@ app.post('/register', async (req, res) => {
     await page.type('input[name="confirm_password"]', password);
 
     console.log('🎂 Biram datum rođenja...');
-    await page.select('#dob_yy', dob_year);
-    await page.select('#dob_mm', dob_month);
-    await page.select('#dob_dd', dob_day);
+    await page.select('select[name="dob_year"]', dob_year);
+    await page.select('select[name="dob_month"]', dob_month);
+    await page.select('select[name="dob_day"]', dob_day);
 
     console.log('🏳️ Biram zemlju...');
     await page.select('select[name="country"]', 'RS');
+    await page.waitForTimeout(1000);
 
-    console.log('⌛ Čekam da “Account Type” postane aktivan...');
-    await page.waitForFunction(
-      () => !document.querySelector('#account_type').disabled,
-      { timeout: 30000 }
-    );
+    console.log('⌛ Čekam da dropdown-ovi postanu aktivni...');
+    await page.waitForSelector('select[name="account_type"]:not([disabled])', { timeout: 30000 });
 
-    console.log('🏳️ Biram account type i ostalo...');
-    await page.select('#account_type', 'live_fixed');
+    console.log('🔧 Popunjavam trading-account polja...');
+    await page.select('select[name="account_type"]', 'live_fixed');
     await page.select('select[name="bonus_scheme"]', '031617');
     await page.select('select[name="currency"]', 'EUR');
     await page.select('select[name="leverage"]', '1000');
@@ -87,10 +85,12 @@ app.post('/register', async (req, res) => {
     await page.waitForSelector('button.register_live_btn', { visible: true });
     await page.click('button.register_live_btn');
 
-    // **DEBUG DUMP**: odmah nakon što smo kliknuli
-    const dumpHtml = await page.content();
-    fs.writeFileSync(path.join(__dirname, 'public', 'after_click.html'), dumpHtml);
-    await page.screenshot({ path: path.join(__dirname, 'public', 'after_click.png'), fullPage: true });
+    // ———— DEBUG DUMP NAKON KLIKA ————
+    await page.waitForTimeout(5000);
+    const afterClickPath = path.join(__dirname, 'public', 'after_click.png');
+    const afterHtmlPath = path.join(__dirname, 'public', 'after_click.html');
+    await page.screenshot({ path: afterClickPath, fullPage: true });
+    fs.writeFileSync(afterHtmlPath, await page.content());
     console.log('🔍 Debug dump posle klika je snimljen.');
 
     console.log('⌛ Čekam da se pojavi “Congratulations” strana...');
@@ -107,16 +107,16 @@ app.post('/register', async (req, res) => {
       email,
       password
     });
-  }
-  catch (err) {
+
+  } catch (err) {
     console.error('❌ Greška tokom registracije:', err);
     try {
-      // fiksirano: koristimo baš ovu `page` instancu
-      const html = page ? await page.content() : '';
-      fs.writeFileSync(path.join(__dirname, 'public', 'loaded_page.html'), html);
-      if (page) {
-        await page.screenshot({ path: path.join(__dirname, 'public', 'loaded_page.png'), fullPage: true });
-      }
+      const [debugPage] = await browser.pages();
+      const html = await debugPage.content();
+      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
+      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
+      fs.writeFileSync(htmlPath, html);
+      await debugPage.screenshot({ path: screenshotPath, fullPage: true });
       console.log('🛠️ Dump za debug je snimljen.');
     } catch (_) { /* ignore */ }
 
@@ -124,10 +124,12 @@ app.post('/register', async (req, res) => {
     return res.status(500).json({
       error: err.message,
       debug: {
-        afterClickHtml: '/debug/after_click.html',
-        afterClickPng: '/debug/after_click.png',
-        loadedHtml: '/debug/loaded_page.html',
-        loadedPng: '/debug/loaded_page.png'
+        screenshot: '/debug/loaded_page.png',
+        html: '/debug/error_dump.html',
+        afterClick: {
+          screenshot: '/debug/after_click.png',
+          html: '/debug/after_click.html'
+        }
       }
     });
   }
