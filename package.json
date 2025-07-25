@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "debug": "echo bump"    // <— ovo pokreće mali “bump” na svakom push-u
+    "debug": "echo bump"
   },
   "dependencies": {
     "express": "^4.21.2",
