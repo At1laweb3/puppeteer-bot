@@ -24,7 +24,7 @@ app.post('/register', async (req, res) => {
 
   let browser;
   try {
-    // Start Puppeteer sa ugrađenim Chromiumom iz node_modules
+    // Pokrećemo Puppeteer sa ugrađenim Chromiumom iz node_modules
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -38,8 +38,8 @@ app.post('/register', async (req, res) => {
       '(KHTML, like Gecko) Chrome/114.0 Safari/537.36'
     );
 
-    console.log('✅ NOVI KOD JE UČITAN');
-    console.log('🌐 Otvaranje stranice...');
+    console.log('NOVI KOD JE UČITAN');
+    console.log('Otvaranje stranice...');
     await page.goto('https://www.t4trade.com/en/register', {
       waitUntil: 'domcontentloaded',
       timeout: 60000
@@ -48,7 +48,7 @@ app.post('/register', async (req, res) => {
     // Kratko čekanje za dodatnu stabilnost
     await page.waitForTimeout(5000);
 
-    console.log('⌛ Čekam da se učita forma...');
+    console.log('Čekam da se učita forma...');
     const formReady = await page
       .waitForSelector('input[name="first_name"]', { timeout: 40000 })
       .catch(() => null);
@@ -56,7 +56,7 @@ app.post('/register', async (req, res) => {
       throw new Error("Input 'first_name' nije pronađen ni nakon 40 sekundi.");
     }
 
-    console.log('✍️ Popunjavam formu...');
+    console.log('Popunjavam formu...');
     await page.type('input[name="first_name"]', first_name);
     await page.type('input[name="last_name"]', last_name);
     await page.type('input[name="email"]', email);
@@ -83,15 +83,15 @@ app.post('/register', async (req, res) => {
       if (!checked) await cb.click();
     }
 
-    console.log('📤 Šaljem formu...');
+    console.log('Šaljem formu...');
     await page.click('button[type="submit"]');
     await page.waitForTimeout(8000);
 
-    console.log('✅ Registracija završena.');
-    return res.status(200).json({ message: '✅ Registrovan uspešno' });
+    console.log('Registracija završena.');
+    return res.status(200).json({ message: 'Registrovan uspešno' });
 
   } catch (err) {
-    console.error('❌ Greška tokom registracije:', err);
+    console.error('Greška tokom registracije:', err);
 
     // Pokušaj snimanja debug dumpa
     try {
@@ -103,7 +103,7 @@ app.post('/register', async (req, res) => {
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
     } catch (innerErr) {
-      console.error('⚠️ Nije uspelo snimanje za debug:', innerErr);
+      console.error('Nije uspelo snimanje za debug:', innerErr);
     }
 
     return res.status(500).json({
@@ -120,5 +120,5 @@ app.post('/register', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log('Server running on port ' + PORT));
 ```
