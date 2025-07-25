@@ -10,7 +10,16 @@ app.use(express.json());
 app.use('/debug', express.static(path.join(__dirname, 'public')));
 
 app.post('/register', async (req, res) => {
-  const { first_name, last_name, email, phone, dob_year, dob_month, dob_day } = req.body;
+  const {
+    first_name,
+    last_name,
+    email,
+    phone,
+    dob_year,
+    dob_month,
+    dob_day
+  } = req.body;
+
   // Generišemo lozinku iz imena
   const password = `${first_name}123#`;
 
@@ -74,23 +83,19 @@ app.post('/register', async (req, res) => {
       });
     });
 
-    console.log('📤 Klik na “Open your Trading Account” dugme i čekam navigaciju...');
-    // istovremeno klik i čekanje navigacije na /en/client-portal
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }),
-      page.click('button.register_live_btn')
-    ]);
+    console.log('📤 Klik na “Open your Trading Account” dugme...');
+    await page.waitForSelector('button.register_live_btn', { visible: true });
+    await page.click('button.register_live_btn');
 
-    const finalUrl = page.url();
-    console.log('🛬 Stigli smo na URL:', finalUrl);
+    // *** novo: čekamo da se URL promeni na client portal ***
+    console.log('⌛ Čekam preusmerenje na client-portal...');
+    await page.waitForFunction(
+      () => window.location.pathname.includes('/client-portal'),
+      { timeout: 60000 }
+    );
+    console.log('✅ Uspešno preusmereno na client-portal');
 
-    if (!finalUrl.includes('/en/client-portal')) {
-      throw new Error(`Neočekivan URL nakon submita: ${finalUrl}`);
-    }
-
-    console.log('✅ Registracija završena.');
     await browser.close();
-
     return res.status(200).json({
       message: '✅ Registrovan uspešno',
       email,
@@ -102,14 +107,7 @@ app.post('/register', async (req, res) => {
     // dump za debug
     try {
       const [debugPage] = await browser.pages();
-      // logujemo koji URL je bio
-      console.error('🔥 DEBUG URL:', debugPage.url());
       const html = await debugPage.content();
-      console.error('🔥 DEBUG HTML BEGIN 🔥');
-      console.error(html);
-      console.error('🔥 DEBUG HTML END 🔥');
-
-      // i čuvamo fajlove u public/debug za vizuelnu inspekciju
       const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
       const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
       fs.writeFileSync(htmlPath, html);
