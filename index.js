@@ -30,6 +30,7 @@ app.post('/register', async (req, res) => {
       args: ['--no-sandbox','--disable-setuid-sandbox'],
       executablePath: puppeteer.executablePath()
     });
+
     const page = await browser.newPage();
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -90,7 +91,7 @@ app.post('/register', async (req, res) => {
     // čekamo da forma “pokrene” svoj JS
     await page.waitForTimeout(12000);
 
-    // **OVO JE NOVO**: proverimo da li smo i dalje na /register
+    // proverimo da li smo i dalje na /register
     const currentUrl = page.url();
     if (currentUrl.includes('/en/register')) {
       throw new Error('Form submission nije preusmerila sa /register — registracija nije uspela.');
@@ -107,22 +108,21 @@ app.post('/register', async (req, res) => {
   }
   catch (err) {
     console.error('❌ Greška tokom registracije:', err);
-    // dump za debug
+
+    // Umesto dump fajlova, logujemo ceo HTML za inspekciju
     try {
       const [debugPage] = await browser.pages();
       const html = await debugPage.content();
-      const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
-      const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
-      fs.writeFileSync(htmlPath, html);
-      await debugPage.screenshot({ path: screenshotPath, fullPage: true });
+      console.log('🔥 DEBUG HTML BEGIN 🔥');
+      console.log(html);
+      console.log('🔥 DEBUG HTML END 🔥');
     } catch (_) { /* ignore */ }
 
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
       debug: {
-        screenshot: '/debug/loaded_page.png',
-        html: '/debug/error_dump.html'
+        note: 'Pogledaj Deploy Logs za DEBUG HTML između markera'
       }
     });
   }
