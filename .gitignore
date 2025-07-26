@@ -1,19 +1,14 @@
 # Node modules
 node_modules/
 
-# Puppeteer lokalni Chromium
+# Puppeteer lokalni Chromium (možeš ignorisati, jer Railway koristi svoj)
 .local-chromium/
 
-# Ignoriši sve u public/, osim .gitkeep i dump fajlova
+# Public debug dump fajlovi
 /public/*
 !public/.gitkeep
-!public/*.html
 !public/*.png
-
-# BFG‑artefakti i tmp folderi
-bfg-*.jar
-puppeteer-bot-clean/
-puppeteer-bot-clean.bfg-report/
+!public/*.html
 
 # Logs & OS files
 *.log

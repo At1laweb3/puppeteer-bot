@@ -18,7 +18,7 @@ app.post('/register', async (req, res) => {
     browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      executablePath: puppeteer.executablePath(),
+      executablePath: puppeteer.executablePath()
     });
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -29,7 +29,7 @@ app.post('/register', async (req, res) => {
     console.log('🌐 Otvaranje stranice...');
     await page.goto('https://www.t4trade.com/en/register', {
       waitUntil: 'domcontentloaded',
-      timeout: 60000,
+      timeout: 60000
     });
 
     console.log('⌛ Čekam da se učita forma...');
@@ -78,7 +78,13 @@ app.post('/register', async (req, res) => {
     await page.click('button.register_live_btn');
 
     console.log('⌛ Čekam da se pojavi “Congratulations” strana...');
-    await page.waitForXPath("//*[contains(normalize-space(.), 'Congratulations')]", { timeout: 40000 });
+    await page.waitForXPath(
+      "//*[contains(normalize-space(.), 'Congratulations')]",
+      { timeout: 40000 }
+    );
+
+    // (opciono) možete i ovde da snimite snapshot uspešne stranice:
+    // await page.screenshot({ path: path.join(__dirname,'public','success.png'), fullPage: true });
 
     console.log('✅ Registrovan uspešno.');
     await browser.close();
@@ -88,17 +94,22 @@ app.post('/register', async (req, res) => {
       email,
       password
     });
-  } catch (err) {
+  }
+  catch (err) {
     console.error('❌ Greška tokom registracije:', err);
     try {
-      const [debugPage] = await browser.pages();
+      // Uhvati poslednju aktivnu stranicu za debug
+      const pages = await browser.pages();
+      const debugPage = pages[pages.length - 1] || pages[0];
       const html = await debugPage.content();
       const screenshotPath = path.join(__dirname, 'public', 'loaded_page.png');
       const htmlPath = path.join(__dirname, 'public', 'error_dump.html');
       fs.writeFileSync(htmlPath, html);
       await debugPage.screenshot({ path: screenshotPath, fullPage: true });
-    } catch (_) { /* ignore */ }
-
+      console.log('🔍 Debug dump snimljen.');
+    } catch (dumpErr) {
+      console.error('⚠️ Problem pri kreiranju debug dumpa:', dumpErr);
+    }
     if (browser) await browser.close();
     return res.status(500).json({
       error: err.message,
